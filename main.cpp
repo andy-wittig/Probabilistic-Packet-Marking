@@ -7,11 +7,13 @@ int main()
 {
     srand(static_cast<unsigned>(time(nullptr)));
 
-    Router r1({192, 168, 1, 1}, 0.2);
-    Router r2({192, 168, 1, 2}, 0.2);
-    Router r3({192, 168, 1, 3}, 0.2);
-    Router r4({192, 168, 1, 4}, 0.2);
-    Router victim({192, 168, 1, 5}, 0.2);
+    float packetMarkingProbability = 0.2f;
+
+    Router r1({192, 168, 1, 1}, packetMarkingProbability);
+    Router r2({192, 168, 1, 2}, packetMarkingProbability);
+    Router r3({192, 168, 1, 3}, packetMarkingProbability);
+    Router r4({192, 168, 1, 4}, packetMarkingProbability);
+    Router victim({192, 168, 1, 5}, packetMarkingProbability);
 
     //---Router Topology---
     //         R1
