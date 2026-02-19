@@ -3,9 +3,6 @@
 #include <vector>
 #include <array>
 
-#include "Response.cpp"
-#include "Request.cpp"
-
 using namespace std;
 
 class IPAddress
