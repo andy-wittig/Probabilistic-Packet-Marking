@@ -11,12 +11,12 @@ class IPAddress
         array<int, 4> address;
         IPAddress(array<int, 4> ip) : address(ip) {}
 
-        void PrintAddress()
+        void PrintAddress() const
         {
             cout << address[0] << "."
                  << address[1] << "."
                  << address[2] << "."
-                 << address[0];
+                 << address[3];
         }
 
         bool operator==(const IPAddress& other) const
@@ -51,7 +51,7 @@ class Router
             neighborRouters.push_back(other);
         }
 
-        bool GetMarkingProbability()
+        bool GetMarkingProbability() const
         { //Returns true if packet is set to be marked.
             float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
             return (r <= _markProbability);
@@ -59,6 +59,15 @@ class Router
 
         void ForwardPacket(Packet& packet)
         {
+            //Drop packets.
+            if (packet.hopCount > 15)
+            {
+                cout << "TTL has been exceeded, packet dropped @: ";
+                _ipAddress.PrintAddress();
+                cout << endl;
+                return;
+            }
+
             //Probability of marking packet.
             if (!packet.marked && GetMarkingProbability())
             {
@@ -74,17 +83,24 @@ class Router
             {
                 cout << "Packet Reached Destination @: ";
                 _ipAddress.PrintAddress();
-                cout << " in " << packet.hopCount << "hops." << endl;
+                cout << " in " << packet.hopCount << " hop(s)." << endl;
+                return;
             }
 
             //Forwarding Logic
             if (!neighborRouters.empty())
             { //Forward to first neighbor.
+                cout << "Packet forwarding from ";
+                _ipAddress.PrintAddress();
+                cout << " to ";
+                neighborRouters[0]->RequestAddress().PrintAddress();
+                cout << endl;
+
                 neighborRouters[0]->ForwardPacket(packet);
             }
         }
 
-        IPAddress RequestAddress()
+        const IPAddress& RequestAddress() const
         {
             return _ipAddress;
         }
