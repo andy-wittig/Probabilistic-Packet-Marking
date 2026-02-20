@@ -1,22 +1,13 @@
 #include <cstdlib>
 #include <iostream>
-#include <thread>
-#include <mutex>
 #include <ctime>
 #include <limits>
-#include <vector>
 
 #include "Router.h"
 
 using namespace std;
 
-void SendPacket(Router& source, Router& destination)
-{
-    Packet packet(source.RequestAddress(), destination.RequestAddress());
-    source.ForwardPacket(packet);
-}
-
-mutex Router::coutMutex;
+mutex Router::coutMutex; //Global mutex for thread-safe debug printing.
 
 int main()
 {
@@ -44,8 +35,6 @@ int main()
     // Generate Topology
     // 10-20 Routers
     // 3, 4, or 5 branches
-    // Attackers should send more packets than normal users (syn-flood or ping-flood).
-    // Attacker rate of sending packets is x times more than normal users.
     //-------------------
     Router attacker({192, 168, 1, 1}, markingProbability);
     Router r1({192, 169, 1, 2}, markingProbability);
@@ -70,34 +59,43 @@ int main()
     r2.Connect(&r4);
     r3.Connect(&victim);
     r4.Connect(&victim);
+
+    attacker.Start();
+    r1.Start();
+    r2.Start();
+    r3.Start();
+    r4.Start();
     //-------------------
 
     //-------------------
     // Packet Forwarding
-    // - Routers should have single thread allocated for use
-    // - Routers use queues to process packets
     //-------------------
 
-    int baseTasks = 1;
-    int attackerTasks = baseTasks * attackerRate;
-    vector<thread> forwardPacketThreads;
-    forwardPacketThreads.reserve(baseTasks + attackerTasks); //Eliminates memory reallocation for every task added.
-    
-    for (int i = 0; i < baseTasks; i++)
+    int basePacketCount = 50;
+    int attackerPacketCount = basePacketCount * attackerRate;
+
+    Packet normalPacket(r1.RequestAddress(), victim.RequestAddress());
+    Packet maliciousPacket(attacker.RequestAddress(), victim.RequestAddress());
+
+    for (int i = 0; i < basePacketCount; i++)
     { //Normal Use Packets
-        forwardPacketThreads.emplace_back(SendPacket, ref(r1), ref(victim));
+        r1.EnqueuePacket(normalPacket);
     }
-    for (int i = 0; i < attackerTasks; i++)
+    for (int i = 0; i < attackerPacketCount; i++)
     { //Attacker Packets
-        forwardPacketThreads.emplace_back(SendPacket, ref(attacker), ref(victim));
+        attacker.EnqueuePacket(maliciousPacket);
     }
 
-    for (auto& t : forwardPacketThreads)
-    {
-        t.join();
-    }
+    //Cleanup Routers
+    attacker.Stop();
+    r1.Stop();
+    r2.Stop();
+    r3.Stop();
+    r4.Stop();
 
+    //Wait Terminal
     cin.get();
     cin.get();
+
     return 0;
 };

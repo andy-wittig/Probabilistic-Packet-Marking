@@ -2,8 +2,11 @@
 #include <cassert>
 #include <vector>
 #include <array>
-#include <mutex>
 #include <random>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <condition_variable>
 
 using namespace std;
 
@@ -39,9 +42,15 @@ struct Packet
 class Router
 {
     private:
+        //Threading
+        queue<Packet> packetQueue;
+        condition_variable cv;
+        thread worker;
+        bool running = false;
+        //Mutexes
         static mutex coutMutex;
         mutex routerMutex;
-
+        //Router
         IPAddress _ipAddress;
         vector<Router*> neighborRouters;
         float _markProbability;
@@ -51,83 +60,135 @@ class Router
             assert(markProbability >= 0 && markProbability <= 1 && "Probability 'markProbability' must be a float between 0 and 1.");
         }
 
+        ~Router()
+        {
+            Stop();
+        }
+
+        void Start()
+        {
+            running = true;
+            worker = thread(&Router::ProcessPackets, this);
+        }
+
+        void Stop()
+        {
+            {
+                lock_guard<mutex> lock(routerMutex);
+                running = false;
+            }
+            cv.notify_all();
+            if (worker.joinable()) { worker.join(); }
+        }
+
         void Connect(Router* other)
         {
             neighborRouters.push_back(other);
         }
 
         bool GetMarkingProbability() const
-        { //Returns true if packet is set to be marked.
+        { //Returns true if packet is randomly set to be marked.
             thread_local static mt19937 generator(random_device{}());
             uniform_real_distribution<float> dist(0.f, 1.f);
             return dist(generator) <= _markProbability;
         }
 
-        void ForwardPacket(Packet& packet)
+        void EnqueuePacket(Packet packet)
+        {
+            {
+                lock_guard<mutex> lock(routerMutex);
+                packetQueue.push(packet);
+            }
+            cv.notify_one();
+        }
+
+        void ProcessPackets()
+        {
+            while (true)
+            {
+                Packet packet(IPAddress({0,0,0,0}), IPAddress({0,0,0,0}));
+
+                {
+                    unique_lock<mutex> lock(routerMutex);
+                    cv.wait(lock, [this]() { //Avoids spin waiting.
+                        return !packetQueue.empty() || !running;
+                    });
+
+                    if (!running && packetQueue.empty()) { break; }
+                        
+                    packet = packetQueue.front();
+                    packetQueue.pop();
+                }
+
+                HandlePacket(packet);
+            }
+        }
+
+        void HandlePacket(Packet& packet)
         {
             Router* nextRouter = nullptr;
 
-            { //Mutex Lock
-                lock_guard<mutex> lock(routerMutex);
-
-                //Drop packets.
-                if (packet.hopCount > 15)
+            //Drop packets.
+            if (packet.hopCount > 15)
+            {
                 {
-                    {
-                        lock_guard<mutex> lock(coutMutex);
-                        cout << "TTL has been exceeded, packet dropped @: ";
-                        _ipAddress.PrintAddress();
-                        cout << endl;
-                    }
-                    return;
+                    lock_guard<mutex> lock(coutMutex);
+                    cout << "TTL has been exceeded, packet dropped @: ";
+                    _ipAddress.PrintAddress();
+                    cout << endl;
                 }
+                return;
+            }
 
-                //Probability of Marking Packet.
-                if (!packet.marked && GetMarkingProbability())
+            //Probability of Marking Packet.
+            if (!packet.marked && GetMarkingProbability())
+            {
+                packet.marked = true;
                 {
-                    packet.marked = true;
-                    {
-                        lock_guard<mutex> lock(coutMutex);
-                        cout << "Router @: ";
-                        _ipAddress.PrintAddress();
-                        cout << " marked the packet." << endl;
-                    }
+                    lock_guard<mutex> lock(coutMutex);
+                    cout << "Router @: ";
+                    _ipAddress.PrintAddress();
+                    cout << " marked the packet." << endl;
                 }
+            }
 
-                if (_ipAddress == packet.destination)
+            if (_ipAddress == packet.destination)
+            {
                 {
-                    {
-                        lock_guard<mutex> lock(coutMutex);
-                        cout << "Packet Reached Destination @: ";
-                        _ipAddress.PrintAddress();
-                        cout << " in " << packet.hopCount << " hop(s)." << endl;
-                    }
-                    return;
+                    lock_guard<mutex> lock(coutMutex);
+                    cout << "Packet Reached Destination @: ";
+                    _ipAddress.PrintAddress();
+                    cout << " in " << packet.hopCount << " hop(s)." << endl;
+                }
+                return;
+            }
+
+            packet.hopCount++;
+
+            //Forwarding Logic
+            if (!neighborRouters.empty())
+            {
+                {
+                    lock_guard<mutex> lock(coutMutex);
+                    cout << "Packet forwarding from ";
+                    _ipAddress.PrintAddress();
+                    cout << " to ";
+                    neighborRouters[0]->RequestAddress().PrintAddress();
+                    cout << endl;
                 }
 
-                packet.hopCount++;
-
-                //Forwarding Logic
-                if (!neighborRouters.empty())
-                { //Forward to first neighbor.
-                    {
-                        lock_guard<mutex> lock(coutMutex);
-                        cout << "Packet forwarding from ";
-                        _ipAddress.PrintAddress();
-                        cout << " to ";
-                        neighborRouters[0]->RequestAddress().PrintAddress();
-                        cout << endl;
-                    }
-
-                    nextRouter = neighborRouters[0];
-                }
+                //Select Random Router Next
+                thread_local static mt19937 gen(random_device{}());
+                uniform_int_distribution<size_t> dist(0, neighborRouters.size() - 1);
+                nextRouter = neighborRouters[dist(gen)];
             }
 
             if (nextRouter)
             {
-                nextRouter->ForwardPacket(packet);
+                this_thread::sleep_for(chrono::milliseconds(10)); //Packet delay
+                nextRouter->EnqueuePacket(packet);
             }
-        } //End of Mutex
+        }
 
         const IPAddress& RequestAddress() const
         {
