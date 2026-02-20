@@ -112,7 +112,7 @@ class Router
         { //Returns true if packet is randomly set to be marked.
             thread_local static mt19937 generator(random_device{}());
             uniform_real_distribution<float> dist(0.f, 1.f);
-            return dist(generator) <= _markProbability;
+            return dist(generator) < _markProbability;
         }
 
         void EnqueuePacket(Packet packet)
@@ -163,7 +163,7 @@ class Router
             }
 
             //Probability of Marking Packet.
-            if (!packet.marked && GetMarkingProbability() && _ipAddress != packet.destination)
+            if (GetMarkingProbability() && _ipAddress != packet.destination)
             {
                 packet.marked = true;
                 packet.markingRouter = _ipAddress;
