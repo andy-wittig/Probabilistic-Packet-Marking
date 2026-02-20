@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <ctime>
+#include <iostream>
 
 #include "Router.h"
 
@@ -7,16 +8,35 @@ int main()
 {
     srand(static_cast<unsigned>(time(nullptr)));
 
-    float packetMarkingProbability = 0.2f;
+    float markingProbability;
+    cout << "Please enter a marking probability (p): ";
+    while (!(cin >> markingProbability))
+    {
+        cout << "The input provided was not a valid number" << endl;
+    }
 
-    Router r1({192, 168, 1, 1}, packetMarkingProbability);
-    Router r2({192, 168, 1, 2}, packetMarkingProbability);
-    Router r3({192, 168, 1, 3}, packetMarkingProbability);
-    Router r4({192, 168, 1, 4}, packetMarkingProbability);
-    Router victim({192, 168, 1, 5}, packetMarkingProbability);
+    float attackerRate;
+    cout << "Please enter the attackers rate (x): ";
+    while (!(cin >> attackerRate))
+    {
+        cout << "The input provided was not a valid number" << endl;
+    }
 
-    //---Router Topology---
-    //         R1
+    //-------------------
+    // Generate Topology
+    // 10-20 Routers
+    // 3, 4, or 5 branches
+    // Attackers should send more packets than normal users (syn-flood or ping-flood).
+    // Attacker rate of sending packets is x times more than normal users.
+    //-------------------
+    Router attacker({192, 168, 1, 1}, markingProbability);
+    Router r2({192, 168, 1, 2}, markingProbability);
+    Router r3({192, 168, 1, 3}, markingProbability);
+    Router r4({192, 168, 1, 4}, markingProbability);
+    Router victim({192, 168, 1, 5}, markingProbability);
+
+    //---Network Topology---
+    //      attacker
     //         /
     //        R2 
     //       /  \
@@ -25,14 +45,18 @@ int main()
     //         Victim
     //---------------------
 
-    r1.Connect(&r2);
+    attacker.Connect(&r2);
     r2.Connect(&r3);
     r2.Connect(&r4);
     r3.Connect(&victim);
     r4.Connect(&victim);
+    //-------------------
 
-    Packet packet(r1.RequestAddress(), victim.RequestAddress());
-    r1.ForwardPacket(packet);
+    //-------------------
+    // Packet Forwarding
+    //-------------------
+    Packet packet(attacker.RequestAddress(), victim.RequestAddress());
+    attacker.ForwardPacket(packet);
 
     system("pause");
     return 0;
