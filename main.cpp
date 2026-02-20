@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <thread>
+#include <mutex>
 #include <ctime>
 #include <limits>
 #include <vector>
@@ -14,6 +15,8 @@ void SendPacket(Router& source, Router& destination)
     Packet packet(source.RequestAddress(), destination.RequestAddress());
     source.ForwardPacket(packet);
 }
+
+mutex Router::coutMutex;
 
 int main()
 {
