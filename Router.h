@@ -15,6 +15,7 @@ class IPAddress
 {
     public:
         array<int, 4> address;
+        IPAddress() : address{0, 0, 0, 0} {}
         IPAddress(array<int, 4> ip) : address(ip) {}
 
         void PrintAddress() const
@@ -29,6 +30,11 @@ class IPAddress
         {
             return address == other.address;
         }
+
+        bool operator!=(const IPAddress& other) const
+        {
+            return address != other.address;
+        }
 };
 
 struct Packet
@@ -37,7 +43,20 @@ struct Packet
     bool marked = false;
     IPAddress source;
     IPAddress destination;
+    IPAddress previousRouter;
+    IPAddress markingRouter;
+    IPAddress markingPreviousRouter;
     Packet(IPAddress s, IPAddress d) : source(s), destination(d) {}
+};
+
+struct MarkedPacketInfo
+{
+    IPAddress markedRouterAddress;
+    IPAddress previousHopAddress;
+    int hopCountFromSource;
+    MarkedPacketInfo(IPAddress s, IPAddress d, int h) : markedRouterAddress(s), 
+                                                    previousHopAddress(d),
+                                                    hopCountFromSource(h) {}
 };
 
 class Router
@@ -54,6 +73,7 @@ class Router
         //Router
         IPAddress _ipAddress; //Routers personal address
         vector<Router*> neighborRouters;
+        vector<MarkedPacketInfo> markedPackets;
         float _markProbability; //0-1
         long packetDelay = 1; //ms
     public:
@@ -143,9 +163,11 @@ class Router
             }
 
             //Probability of Marking Packet.
-            if (!packet.marked && GetMarkingProbability())
+            if (!packet.marked && GetMarkingProbability() && _ipAddress != packet.destination)
             {
                 packet.marked = true;
+                packet.markingRouter = _ipAddress;
+                packet.markingPreviousRouter = packet.previousRouter;
                 {
                     lock_guard<mutex> lock(coutMutex);
                     cout << "Router @: ";
@@ -156,6 +178,12 @@ class Router
 
             if (_ipAddress == packet.destination)
             {
+                if (packet.marked)
+                {
+                    lock_guard<mutex> lock(routerMutex);
+                    markedPackets.emplace_back(packet.markingRouter, packet.markingPreviousRouter, packet.hopCount);
+                }
+
                 {
                     lock_guard<mutex> lock(coutMutex);
                     cout << "Packet Reached Destination @: ";
@@ -170,6 +198,8 @@ class Router
             //Forwarding Logic
             if (!neighborRouters.empty())
             {
+                packet.previousRouter = _ipAddress;
+
                 {
                     lock_guard<mutex> lock(coutMutex);
                     cout << "Packet forwarding from ";
@@ -195,5 +225,10 @@ class Router
         const IPAddress& RequestAddress() const
         {
             return _ipAddress;
+        }
+
+        vector<MarkedPacketInfo> GetMarkedPackets() const
+        {
+            return markedPackets;
         }
 };

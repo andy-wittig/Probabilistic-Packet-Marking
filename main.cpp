@@ -2,12 +2,35 @@
 #include <iostream>
 #include <ctime>
 #include <limits>
+#include <string>
 
 #include "Router.h"
 
 using namespace std;
 
 mutex Router::coutMutex; //Global mutex for thread-safe debug printing.
+
+void RunNodeSample(Router& endpoint)
+{
+    for (auto markedPacket : endpoint.GetMarkedPackets())
+    {
+        cout << "Marked Router: ";
+        markedPacket.markedRouterAddress.PrintAddress();
+        cout << ", Hop Count: " << markedPacket.hopCountFromSource << endl;
+    }
+}
+
+void RunEdgeSample(Router& endpoint)
+{
+for (auto markedPacket : endpoint.GetMarkedPackets())
+    {
+        cout << "Marked Router: ";
+        markedPacket.markedRouterAddress.PrintAddress();
+        cout << ", Previous Router: ";
+        markedPacket.previousHopAddress.PrintAddress();
+        cout << ", Hop Count: " << markedPacket.hopCountFromSource << endl;
+    }
+}
 
 int main()
 {
@@ -44,13 +67,13 @@ int main()
     Router victim({192, 168, 1, 6}, markingProbability);
 
     //---Network Topology---
-    //      R1  attacker
+    //   R1(.2) attacker(.1)
     //        \/
-    //        R2 
+    //        R2(.3)
     //       /  \
-    //      R3   R4
+    //    R3(.4) R4(.5)
     //        \   \
-    //         Victim
+    //         Victim(.6)
     //---------------------
 
     attacker.Connect(&r2);
@@ -71,7 +94,6 @@ int main()
     //-------------------
     // Packet Forwarding
     //-------------------
-
     int basePacketCount = 10;
     int attackerPacketCount = basePacketCount * attackerRate;
 
@@ -94,6 +116,30 @@ int main()
     r3.Stop();
     r4.Stop();
     victim.Stop();
+
+    //-------------------
+    // Traceback
+    //-------------------
+    int tracebackChoice;
+    cout << "Please enter (1) to perform node-sampling, or (2) for edge-sampling: ";
+    while (!(cin >> tracebackChoice))
+    {
+        cout << "The input provided was not a valid number.";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    switch (tracebackChoice)
+    {
+        case 1:
+            RunNodeSample(victim);
+            break;
+        case 2:
+            RunEdgeSample(victim);
+            break;
+        default:
+            cout << "The input provided was not 1 or 2." << endl;
+            break;
+    }
 
     //Wait Terminal
     cin.get();
