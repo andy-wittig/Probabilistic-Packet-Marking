@@ -7,6 +7,7 @@
 #include <queue>
 #include <thread>
 #include <condition_variable>
+#include <chrono>
 
 using namespace std;
 
@@ -42,18 +43,19 @@ struct Packet
 class Router
 {
     private:
-        //Threading
+        //Packet Queue and Threading
         queue<Packet> packetQueue;
-        condition_variable cv;
+        condition_variable cv; //Used to avoid spin waiting.
         thread worker;
         bool running = false;
         //Mutexes
         static mutex coutMutex;
         mutex routerMutex;
         //Router
-        IPAddress _ipAddress;
+        IPAddress _ipAddress; //Routers personal address
         vector<Router*> neighborRouters;
-        float _markProbability;
+        float _markProbability; //0-1
+        long packetDelay = 1; //ms
     public:
         Router(array<int, 4> ip, float markProbability) : _ipAddress(ip), _markProbability(markProbability)
         {
@@ -185,7 +187,7 @@ class Router
 
             if (nextRouter)
             {
-                this_thread::sleep_for(chrono::milliseconds(10)); //Packet delay
+                this_thread::sleep_for(chrono::milliseconds(packetDelay)); //Packet delay
                 nextRouter->EnqueuePacket(packet);
             }
         }

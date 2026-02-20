@@ -65,13 +65,14 @@ int main()
     r2.Start();
     r3.Start();
     r4.Start();
+    victim.Start();
     //-------------------
 
     //-------------------
     // Packet Forwarding
     //-------------------
 
-    int basePacketCount = 50;
+    int basePacketCount = 10;
     int attackerPacketCount = basePacketCount * attackerRate;
 
     Packet normalPacket(r1.RequestAddress(), victim.RequestAddress());
@@ -92,6 +93,7 @@ int main()
     r2.Stop();
     r3.Stop();
     r4.Stop();
+    victim.Stop();
 
     //Wait Terminal
     cin.get();
