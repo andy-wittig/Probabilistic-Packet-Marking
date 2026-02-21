@@ -84,7 +84,7 @@ class Router
         vector<Router*> neighborRouters;
         vector<MarkedPacketInfo> markedPackets;
         float _markProbability; //0-1
-        long packetDelay = 1; //ms
+        long packetDelay = 0.1; //ms
     public:
         Router(array<int, 4> ip, float markProbability) : _ipAddress(ip), _markProbability(markProbability)
         {
@@ -178,10 +178,12 @@ class Router
                 packet.markingRouter = _ipAddress;
                 packet.markingPreviousRouter = packet.previousRouter;
                 {
+                    /*
                     lock_guard<mutex> lock(coutMutex);
                     cout << "Router @: ";
                     _ipAddress.PrintAddress();
                     cout << " marked the packet." << endl;
+                    */
                 }
             }
 
@@ -194,10 +196,12 @@ class Router
                 }
 
                 {
+                    /*
                     lock_guard<mutex> lock(coutMutex);
                     cout << "Packet Reached Destination @: ";
                     _ipAddress.PrintAddress();
                     cout << " in " << packet.hopCount << " hop(s)." << endl;
+                    */
                 }
                 return;
             }
@@ -210,12 +214,14 @@ class Router
                 packet.previousRouter = _ipAddress;
 
                 {
+                    /*
                     lock_guard<mutex> lock(coutMutex);
                     cout << "Packet forwarding from ";
                     _ipAddress.PrintAddress();
                     cout << " to ";
                     neighborRouters[0]->RequestAddress().PrintAddress();
                     cout << endl;
+                    */
                 }
 
                 //Select Random Router Next
