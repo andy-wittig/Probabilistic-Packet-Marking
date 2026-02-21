@@ -8,6 +8,7 @@
 #include <thread>
 #include <condition_variable>
 #include <chrono>
+#include <string>
 
 using namespace std;
 
@@ -24,6 +25,14 @@ class IPAddress
                  << address[1] << "."
                  << address[2] << "."
                  << address[3];
+        }
+
+        string GetAddressAsString() const
+        {
+            return to_string(address[0]) + "." +
+                   to_string(address[1]) + "." +
+                   to_string(address[2]) + "." +
+                   to_string(address[3]);
         }
 
         bool operator==(const IPAddress& other) const
