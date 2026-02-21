@@ -50,12 +50,10 @@ void RunNodeSample(Router& endpoint)
             filteredRouters.push_back(router);
     }
 
-    /*
     for (auto& router : filteredRouters)
     {
         cout << router.first << ": " << router.second << endl;
     }
-    */
 
     sort(filteredRouters.begin(), filteredRouters.end(),
         [] (const pair<string, int>& a, const pair<string, int>& b)
@@ -64,6 +62,7 @@ void RunNodeSample(Router& endpoint)
         }); //Sort using lambda.
     
     //Ground Truth
+    /*
     vector<string> truePath = {
         "192.168.1.10",
         "192.168.1.10",
@@ -86,20 +85,22 @@ void RunNodeSample(Router& endpoint)
         "192.168.1.0",
         "192.168.0.0",
     };
+    */
 
     //Construct Path
-    vector<string> predictedPath;
+    //vector<string> predictedPath;
 
-    float accuracyPercent;
+    //float accuracyPercent;
     //cout << "Estimated Path: victim -> ";
     for (auto& address : filteredRouters)
     {
-        //cout << address.first << " -> ";
-        predictedPath.push_back(address.first);
+        cout << address.first << " -> ";
+        //predictedPath.push_back(address.first);
     }
-    //cout << "attacker" << endl;
-    unordered_set<string> predictedSet(predictedPath.begin(), predictedPath.end());
+    cout << "attacker" << endl;
+    //unordered_set<string> predictedSet(predictedPath.begin(), predictedPath.end());
     
+    /*
     int correctOrdered = 0;
     int minLength = min(predictedPath.size(), truePath.size());
     for (int i = 0; i < minLength; ++i)
@@ -127,21 +128,22 @@ void RunNodeSample(Router& endpoint)
 
     accuracyPercent = 100.0f * max(0, truePositives - falsePositives) / trueSet.size();
     cout << "Node-sampling unordered accuracy: " << accuracyPercent << "%" << endl;
+    */
 }
 
 void RunEdgeSample(Router& endpoint)
 {
     vector<MarkedPacketInfo> markedPackets = endpoint.GetMarkedPackets();
-    /*
     for (auto markedPacket : markedPackets)
     {
+        /*
         cout << "Marked Router: ";
         markedPacket.markedRouterAddress.PrintAddress();
         cout << ", Previous Router: ";
         markedPacket.previousHopAddress.PrintAddress();
         cout << ", Hop Count: " << markedPacket.hopCountFromSource << endl;
+        */
     }
-    */
 
     unordered_map<string, unordered_map<string, int>> edgeCount;
     for (auto& markedPacket : markedPackets)
@@ -186,6 +188,7 @@ void RunEdgeSample(Router& endpoint)
     });
 
     //Ground Truth
+    /*
     vector<string> truePath = {
         "192.168.1.10",
         "192.168.1.10",
@@ -208,22 +211,21 @@ void RunEdgeSample(Router& endpoint)
         "192.168.1.0",
         "192.168.0.0",
     };
+    */
 
     //Construct Path
-    vector<string> predictedPath;
-    float accuracyPercent;
+    //vector<string> predictedPath;
+    //float accuracyPercent;
 
     for (auto& edge : filteredEdges)
     {
-        /*
         cout << "From: " << edge.first.first <<
                 ", To: " << edge.first.second <<
                 ", Frequency: " << edge.second << endl;
-        */
-        predictedPath.push_back(edge.first.second);
+        //predictedPath.push_back(edge.first.second);
     }
-    unordered_set<string> predictedSet(predictedPath.begin(), predictedPath.end());
-    
+    //unordered_set<string> predictedSet(predictedPath.begin(), predictedPath.end());
+    /*
     int correctOrdered = 0;
     int minLength = min(predictedPath.size(), truePath.size());
     for (int i = 0; i < minLength; ++i)
@@ -251,13 +253,14 @@ void RunEdgeSample(Router& endpoint)
 
     accuracyPercent = 100.0f * max(0, truePositives - falsePositives) / trueSet.size();
     cout << "Edge-sampling unordered accuracy: " << accuracyPercent << "%" << endl;
+    */
 }
 
 void RunSimulation(float prob, float rate)
 {
-    cout << "Running simulation for p = " << prob << ", x = " << rate << endl; 
+    //cout << "Running simulation for p = " << prob << ", x = " << rate << endl; 
+
     float markingProbability = prob;
-    /*
     cout << "Please enter a marking probability (p): ";
     while (!(cin >> markingProbability))
     {
@@ -265,10 +268,8 @@ void RunSimulation(float prob, float rate)
         cin.clear();
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
     }
-    */
     
     float attackerRate = rate;
-    /*
     cout << "Please enter the attackers rate (x): ";
     while (!(cin >> attackerRate))
     {
@@ -276,7 +277,6 @@ void RunSimulation(float prob, float rate)
         cin.clear();
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
     }
-    */
 
     //-------------------
     // Generate Topology
@@ -298,7 +298,6 @@ void RunSimulation(float prob, float rate)
     Router victim({192, 168, 1, 255}, markingProbability);
 
     //Topology for One Attacker and One Normal User
-    /*
     attacker.Connect(&r2);
     r2.Connect(&r6);
     r6.Connect(&r9);
@@ -313,9 +312,9 @@ void RunSimulation(float prob, float rate)
     r7.Connect(&r8);
     r8.Connect(&r10);
     r10.Connect(&victim);
-    */
 
     //Topology for Two Attackers and One Normal User
+    /*
     attacker.Connect(&r2);
     attacker2.Connect(&r4);
     r2.Connect(&r6);
@@ -330,9 +329,10 @@ void RunSimulation(float prob, float rate)
     r8.Connect(&r10);
     r3.Connect(&r10);
     r10.Connect(&victim);
+    */
 
     attacker.Start();
-    attacker2.Start();
+    //attacker2.Start();
     r1.Start();
     r2.Start();
     r3.Start();
@@ -363,12 +363,12 @@ void RunSimulation(float prob, float rate)
     for (int i = 0; i < attackerPacketCount; i++)
     { //Attacker Packets
         attacker.EnqueuePacket(maliciousPacket);
-        attacker2.EnqueuePacket(maliciousPacket);
+        //attacker2.EnqueuePacket(maliciousPacket);
     }
 
     //Cleanup Routers
     attacker.Stop();
-    attacker2.Stop();
+    //attacker2.Stop();
     r1.Stop();
     r2.Stop();
     r3.Stop();
@@ -389,25 +389,7 @@ int main()
 {
     srand(static_cast<unsigned>(time(nullptr)));
 
-    RunSimulation(0.2, 10);
-    RunSimulation(0.2, 100);
-    RunSimulation(0.2, 1000);
-
-    RunSimulation(0.4, 10);
-    RunSimulation(0.4, 100);
-    RunSimulation(0.4, 1000);
-
-    RunSimulation(0.5, 10);
-    RunSimulation(0.5, 100);
-    RunSimulation(0.5, 1000);
-
-    RunSimulation(0.6, 10);
-    RunSimulation(0.6, 100);
-    RunSimulation(0.6, 1000);
-
-    RunSimulation(0.8, 10);
-    RunSimulation(0.8, 100);
-    RunSimulation(0.8, 1000);
+    RunSimulation(0, 0);
 
     //-------------------
     // Traceback
